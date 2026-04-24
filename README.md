@@ -90,19 +90,24 @@ cp -r ./skills/speckit-merge ~/.codex/skills/
 cp -r ./skills/speckit-debug-loop ~/.codex/skills/
 
 # 4. Source the shell wrapper so `new-speckit-fsharp` becomes available.
-# Add this to ~/.bashrc or ~/.zshrc to make it permanent:
+# ─ bash / zsh ─ add to ~/.bashrc or ~/.zshrc:
 source ~/projects/speckit-fsharp-tooling/scripts/new-speckit-fsharp.sh
+# ─ nushell ─ add to ~/.config/nushell/config.nu:
+source ~/projects/speckit-fsharp-tooling/scripts/new-speckit-fsharp.nu
 ```
 
 ## Shell wrapper
 
-The wrapper lives at `scripts/new-speckit-fsharp.sh`. Source it (don't
-execute) so the function it defines joins your current shell. Once sourced,
-run `new-speckit-fsharp --help` to see its options.
+Two equivalent wrappers ship with this repo, pick the one that matches
+your shell:
 
-Under the hood it runs:
+- `scripts/new-speckit-fsharp.sh` — bash / zsh
+- `scripts/new-speckit-fsharp.nu` — nushell (0.104+)
 
-```bash
+Source (don't execute) so the function defined inside joins your current
+shell. Under the hood both run the same five steps:
+
+```text
 dotnet new speckit-fsharp-lib -n <name> -o <name> [--Framework …]
 specify init . --integration codex --force
 specify preset add --dev <tooling>/presets/fsharp-opinionated
@@ -110,10 +115,31 @@ specify extension add --dev <tooling>/extensions/evidence
 git init + initial commit
 ```
 
-Error handling: any step failure halts the chain with a named diagnostic
-(`new-speckit-fsharp: preset add failed`, etc.). The script auto-resolves
-the monorepo root from its own file location, so you can keep the tooling
-anywhere — `source` still works.
+**bash/zsh form:**
+
+```bash
+new-speckit-fsharp MyLibrary
+new-speckit-fsharp MyLibrary --Framework net10.0
+new-speckit-fsharp MyLibrary --SkipSolution
+```
+
+Extra arguments after `<name>` pass through to `dotnet new`. `--help`
+prints usage.
+
+**nushell form** (uses `def --env` so `cd` propagates to the caller):
+
+```nushell
+new-speckit-fsharp MyLibrary
+new-speckit-fsharp MyLibrary --framework net10.0
+new-speckit-fsharp MyLibrary --skip-solution
+```
+
+Nu flags are kebab-case and the `--framework` value is constrained to
+the choices your `template.json` offers (net8.0 | net9.0 | net10.0).
+
+Both wrappers auto-resolve the monorepo root from their own file location,
+so you can keep the tooling anywhere. Error handling halts on any failed
+step with a named diagnostic (bash) or a structured `error make` (nu).
 
 Usage:
 
