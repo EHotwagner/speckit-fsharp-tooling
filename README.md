@@ -78,48 +78,42 @@ Minimal F# library scaffold aligned with the preset's principles:
 
 ```bash
 # 1. Clone this repo somewhere durable.
-git clone <this-repo> ~/projects/speckit-fsharp-tooling
+git clone https://github.com/EHotwagner/speckit-fsharp-tooling ~/projects/speckit-fsharp-tooling
 cd ~/projects/speckit-fsharp-tooling
 
 # 2. Install the dotnet new template pack.
 dotnet new install ./templates/speckit-fsharp-lib
 
 # 3. Install the Codex skills globally.
-# (Skills aren't in this repo directly — copy from your authoring
-#  location, or clone them from their own repo if you publish them.)
-# Example if you keep local copies under ./skills/ in this repo:
-#   mkdir -p ~/.codex/skills
-#   cp -r ./skills/speckit-merge ~/.codex/skills/ 2>/dev/null || true
-#   cp -r ./skills/speckit-debug-loop ~/.codex/skills/ 2>/dev/null || true
+mkdir -p ~/.codex/skills
+cp -r ./skills/speckit-merge ~/.codex/skills/
+cp -r ./skills/speckit-debug-loop ~/.codex/skills/
 
-# 4. Add the shell wrapper to your shell rc file.
+# 4. Source the shell wrapper so `new-speckit-fsharp` becomes available.
+# Add this to ~/.bashrc or ~/.zshrc to make it permanent:
+source ~/projects/speckit-fsharp-tooling/scripts/new-speckit-fsharp.sh
 ```
 
 ## Shell wrapper
 
-Add to `~/.bashrc` or `~/.zshrc`:
+The wrapper lives at `scripts/new-speckit-fsharp.sh`. Source it (don't
+execute) so the function it defines joins your current shell. Once sourced,
+run `new-speckit-fsharp --help` to see its options.
+
+Under the hood it runs:
 
 ```bash
-new-speckit-fsharp() {
-  local name="${1:?usage: new-speckit-fsharp <name>}"
-  mkdir -p "$name" && cd "$name" || return 1
-
-  # .NET-side scaffold.
-  dotnet new speckit-fsharp-lib -n "$name"
-
-  # Speckit-side scaffold.
-  # `--preset` on `specify init` is only for catalog IDs; for local
-  # development paths we use `specify preset add --dev` after init.
-  specify init . --ai codex --ai-skills
-  specify preset add --dev ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
-  specify extension add --dev ~/projects/speckit-fsharp-tooling/extensions/evidence
-
-  # First commit.
-  git init -q
-  git add -A
-  git commit -qm "Initial Speckit F# scaffold"
-}
+dotnet new speckit-fsharp-lib -n <name> -o <name> [--Framework …]
+specify init . --integration codex --force
+specify preset add --dev <tooling>/presets/fsharp-opinionated
+specify extension add --dev <tooling>/extensions/evidence
+git init + initial commit
 ```
+
+Error handling: any step failure halts the chain with a named diagnostic
+(`new-speckit-fsharp: preset add failed`, etc.). The script auto-resolves
+the monorepo root from its own file location, so you can keep the tooling
+anywhere — `source` still works.
 
 Usage:
 
@@ -136,7 +130,7 @@ cd MyLibrary
 /speckit.specify        # draft feature spec
 /speckit.plan           # plan it
 /speckit.tasks          # emits tasks.md AND tasks.deps.yml
-                        # before_implement hook fires speckit.graph.compute
+                        # before_implement hook fires speckit.evidence.graph
 /speckit.implement      # marks [X] / [S] per task; re-runs graph compute
                         # after_implement hook fires speckit.evidence.audit
                         # verdict must be PASS to declare merge-ready
@@ -153,7 +147,7 @@ they do not auto-update. To refresh:
 specify preset remove fsharp-opinionated
 specify preset add --dev ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
 
-specify extension remove evidence --force
+specify extension remove evidence
 specify extension add --dev ~/projects/speckit-fsharp-tooling/extensions/evidence
 ```
 
@@ -173,23 +167,28 @@ speckit-fsharp-tooling/
 │       ├── templates/
 │       │   ├── constitution-template.md
 │       │   ├── tasks-template.md
-│       │   └── tasks.deps-template.yml
+│       │   └── tasks-deps-template.yml
 │       └── commands/
-│           ├── speckit-constitution.md
-│           ├── speckit-tasks.md
-│           └── speckit-implement.md
+│           ├── speckit.constitution.md
+│           ├── speckit.tasks.md
+│           └── speckit.implement.md
 ├── extensions/
 │   └── evidence/
 │       ├── extension.yml
 │       ├── audit-patterns.yml
 │       ├── commands/
-│       │   ├── speckit.graph.compute.md
+│       │   ├── speckit.evidence.graph.md
 │       │   └── speckit.evidence.audit.md
 │       └── scripts/
 │           ├── python/
 │           │   └── compute-task-graph.py
 │           └── bash/
 │               └── run-audit.sh
+├── skills/                                    ← Codex skills (source of truth)
+│   ├── speckit-merge/SKILL.md
+│   └── speckit-debug-loop/SKILL.md
+├── scripts/
+│   └── new-speckit-fsharp.sh                  ← shell wrapper (source, don't exec)
 └── templates/
     └── speckit-fsharp-lib/                    ← dotnet new template
         ├── .template.config/template.json
@@ -200,9 +199,9 @@ speckit-fsharp-tooling/
         └── scripts/prelude.fsx
 ```
 
-Codex skills live globally in `~/.codex/skills/speckit-merge/` and
-`~/.codex/skills/speckit-debug-loop/` — not in the monorepo itself,
-because spec-kit skills are resolved from the global directory.
+The `skills/` directory is the source of truth for the two Codex skills.
+The one-time install step (step 3 above) copies them into
+`~/.codex/skills/`, where Codex discovers them globally.
 
 ## Status
 
@@ -214,4 +213,6 @@ because spec-kit skills are resolved from the global directory.
       add --dev` + `specify extension add --dev` install cleanly, templates
       resolve to the preset, hooks register on both `before_implement` and
       `after_implement`, graph compute propagates `[S]` → `[S*]` correctly.
+- [x] `new-speckit-fsharp` shell wrapper — smoke-tested end-to-end;
+      scaffolds, installs preset + extension, builds, tests (2 passed).
 - [ ] publish as a preset / extension catalog for cross-machine install
