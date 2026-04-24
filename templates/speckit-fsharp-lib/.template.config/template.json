@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "EHotwagner",
+  "classifications": ["F#", "Library", "Speckit"],
+  "identity": "Speckit.FSharp.Lib",
+  "name": "Speckit F# Library",
+  "shortName": "speckit-fsharp-lib",
+  "tags": {
+    "language": "F#",
+    "type": "project"
+  },
+  "sourceName": "SpeckitFSharpLib",
+  "preferNameDirectory": true,
+  "symbols": {
+    "Framework": {
+      "type": "parameter",
+      "description": "The target framework for the library.",
+      "datatype": "choice",
+      "choices": [
+        { "choice": "net9.0", "description": ".NET 9" },
+        { "choice": "net8.0", "description": ".NET 8 (LTS)" }
+      ],
+      "defaultValue": "net9.0",
+      "replaces": "TARGET_FRAMEWORK"
+    },
+    "SkipSolution": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the .sln file (use if you already have one)."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(SkipSolution)",
+          "exclude": [ "*.sln" ]
+        }
+      ]
+    }
+  ]
+}
