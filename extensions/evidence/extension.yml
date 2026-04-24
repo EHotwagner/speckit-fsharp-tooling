@@ -21,26 +21,24 @@ requires:
 
 provides:
   commands:
-    - name: speckit.graph.compute
-      file: commands/speckit.graph.compute.md
+    - name: speckit.evidence.graph
+      file: commands/speckit.evidence.graph.md
       description: "Parse tasks.md + tasks.deps.yml, validate the DAG, compute effective status propagation, render task-graph.{json,md}"
     - name: speckit.evidence.audit
       file: commands/speckit.evidence.audit.md
       description: "Run graph compute then diff-scan; emit PASS / NEEDS-EVIDENCE verdict. Hard-blocks on unresolved [S]/[S*] or diff-scan hits unless --accept-synthetic is set"
 
-  hooks:
-    before_implement:
-      - command: speckit.graph.compute
-        enabled: true
-        optional: false
-        prompt: Validate task DAG before implementation begins?
-        description: Refuse to start /speckit.implement on a broken graph (cycles, dangling refs)
-    after_implement:
-      - command: speckit.evidence.audit
-        enabled: true
-        optional: false
-        prompt: Run evidence audit now?
-        description: Merge-gate audit — hard-blocks on [S]/[S*] or diff-scan hits unless --accept-synthetic
+hooks:
+  before_implement:
+    command: speckit.evidence.graph
+    optional: false
+    prompt: "Validate task DAG before implementation begins?"
+    description: "Refuse to start /speckit.implement on a broken graph (cycles, dangling refs)"
+  after_implement:
+    command: speckit.evidence.audit
+    optional: false
+    prompt: "Run evidence audit now?"
+    description: "Merge-gate audit — hard-blocks on [S]/[S*] or diff-scan hits unless --accept-synthetic"
 
 tags:
   - evidence

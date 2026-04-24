@@ -85,9 +85,12 @@ cd ~/projects/speckit-fsharp-tooling
 dotnet new install ./templates/speckit-fsharp-lib
 
 # 3. Install the Codex skills globally.
-cp -r skills/speckit-merge ~/.codex/skills/ 2>/dev/null || true
-cp -r skills/speckit-debug-loop ~/.codex/skills/ 2>/dev/null || true
-# (Or symlink if you want repo edits to reflect live.)
+# (Skills aren't in this repo directly — copy from your authoring
+#  location, or clone them from their own repo if you publish them.)
+# Example if you keep local copies under ./skills/ in this repo:
+#   mkdir -p ~/.codex/skills
+#   cp -r ./skills/speckit-merge ~/.codex/skills/ 2>/dev/null || true
+#   cp -r ./skills/speckit-debug-loop ~/.codex/skills/ 2>/dev/null || true
 
 # 4. Add the shell wrapper to your shell rc file.
 ```
@@ -105,9 +108,11 @@ new-speckit-fsharp() {
   dotnet new speckit-fsharp-lib -n "$name"
 
   # Speckit-side scaffold.
-  specify init . --ai codex --ai-skills \
-      --preset ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
-  specify extension add ~/projects/speckit-fsharp-tooling/extensions/evidence
+  # `--preset` on `specify init` is only for catalog IDs; for local
+  # development paths we use `specify preset add --dev` after init.
+  specify init . --ai codex --ai-skills
+  specify preset add --dev ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
+  specify extension add --dev ~/projects/speckit-fsharp-tooling/extensions/evidence
 
   # First commit.
   git init -q
@@ -146,10 +151,10 @@ they do not auto-update. To refresh:
 ```bash
 # From inside an existing project:
 specify preset remove fsharp-opinionated
-specify preset add ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
+specify preset add --dev ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated
 
-specify extension remove evidence
-specify extension add ~/projects/speckit-fsharp-tooling/extensions/evidence
+specify extension remove evidence --force
+specify extension add --dev ~/projects/speckit-fsharp-tooling/extensions/evidence
 ```
 
 LOCKED sections of the constitution will be rewritten from the new
@@ -205,5 +210,8 @@ because spec-kit skills are resolved from the global directory.
 - [x] evidence extension (graph compute, audit, patterns)
 - [x] Codex skills (speckit-merge, speckit-debug-loop)
 - [x] dotnet new template (speckit-fsharp-lib)
-- [ ] end-to-end smoke test in a fresh project
+- [x] end-to-end smoke test in a fresh project — confirmed `specify preset
+      add --dev` + `specify extension add --dev` install cleanly, templates
+      resolve to the preset, hooks register on both `before_implement` and
+      `after_implement`, graph compute propagates `[S]` → `[S*]` correctly.
 - [ ] publish as a preset / extension catalog for cross-machine install
