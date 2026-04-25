@@ -16,6 +16,21 @@ The `[S*]` marker is computed, not written: any task whose dependency is
 `[S]` or `[S*]` and which otherwise would be `[X]` is promoted to `[S*]` by
 the evidence audit. See `readiness/task-graph.md` for the propagated view.
 
+## Vertical-slice rule (US phases)
+
+A task tagged `[US*]` may only be marked `[X]` when the change is
+reachable from a user-facing entry point and that path was actually
+exercised — an FSI session against the packed library, a smoke run of the
+application, a manual walk-through with transcript, or a screenshot
+captured under `readiness/`. Domain, model, or core-layer changes alone
+do **not** satisfy `[X]` for a `[US*]` task, even if their unit tests
+pass green. If the user-reachable surface is missing, stubbed, or not
+yet wired, mark `[ ]` (work continues) or `[S]` with a disclosed reason
+in the Synthetic-Evidence Inventory — never `[X]`.
+
+This rule does not apply to Setup, Foundation, Integration, or Polish
+phase tasks; those are evaluated against their own phase verification.
+
 ## Task Annotations
 
 - **[P]** — parallel-safe (no deps inside the current phase)

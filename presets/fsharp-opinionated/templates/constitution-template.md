@@ -65,9 +65,30 @@ feature's spec or plan. The following require explicit justification:
 If such a feature appears without matching justification, the reviewer
 treats it as a spec defect, not a code defect.
 
+**Mutation is allowed when it is the simpler or faster code.** `mutable`
+bindings, `for` / `while` loops, and `ref` cells MAY be used when they
+are demonstrably plainer than the immutable alternative or are needed
+on a measured hot path. "Pipelines over mutation" is the default, not a
+prohibition: a single accumulator that is never aliased, an inner loop
+over a buffer, or a performance-critical routine is fine to write with
+`mutable`. Disclose the reason at the use site with a one-line comment
+(e.g. `// mutable: hot path`, `// mutable: avoids deep accumulator
+threading`) so a reader doesn't waste effort "fixing" it.
+
+**Recursion is for branching structure, not for hiding state.** `let
+rec` is the right tool when the problem is genuinely recursive —
+state-machine transitions, tree / graph walks, branching evaluators,
+parser combinators. It is the wrong tool when its only purpose is to
+thread an accumulator through self-calls in order to avoid a `mutable`.
+If the recursion exists solely to dodge mutation, the `mutable` is the
+clearer code; prefer it.
+
 Rationale: Complexity compounds in F# because the language rewards
 expressive tricks. A simplicity bias keeps code legible to future maintainers
-who are not the current author.
+who are not the current author. Dogmatic immutability — recursion
+gymnastics in place of an obvious loop, or a fold-with-state where a
+`mutable` would read straight through — is itself a form of cleverness
+this principle exists to discourage.
 
 ### IV. Synthetic Evidence Requires Loud, Repeated Disclosure
 

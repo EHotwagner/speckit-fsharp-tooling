@@ -35,6 +35,31 @@ evidence audit will catch many such cases via diff-scan, but the agent is
 expected to be honest about direct declarations. Dishonesty undermines the
 whole synthetic-evidence regime (Principle IV).
 
+## Vertical-slice rule (US phases)
+
+A task tagged `[US*]` may only be marked `[X]` when the user-facing
+surface was actually exercised end-to-end. "Exercised" means one of:
+
+- An FSI transcript captured under `readiness/` that drives the new
+  behavior through its public entry point — not through internal helpers.
+- A smoke run of the host application (CLI invocation, GUI launch, HTTP
+  request) that touches the new code path, with the artifact (log,
+  screenshot, response body) saved under `readiness/`.
+- A semantic test that loads the **packed** library or runs the host
+  binary and exercises the user-reachable path — not a unit test against
+  domain modules in isolation.
+
+A diff that touches only `Domain/`, `Core/`, `Models/`, or equivalent
+internal layers is **never** sufficient evidence for `[X]` on a `[US*]`
+task. The story isn't done when the model compiles; it's done when the
+user can reach it. If wire-up to the UI / CLI / API surface is missing,
+the honest status is `[ ]` (continue working) or `[S]` (disclose the
+gap and create a tracking issue for the real wire-up).
+
+This rule is in addition to the synthetic-evidence checks above. A task
+can fail the vertical-slice rule without involving any mocks at all —
+domain code that nothing calls is its own failure mode.
+
 ## Synthetic-evidence disclosures (Principle IV)
 
 When you emit an `[S]` task, you MUST also:
@@ -69,8 +94,12 @@ When you emit an `[S]` task, you MUST also:
    or `[S]`. If any dep is `[ ]`, `[F]`, or `[-]`, stop and raise it.
 3. Implement the task per the plan.
 4. Run the verification appropriate for the phase (tests, baseline check,
-   FSI exercise, …).
-5. Update the status in `tasks.md`. If `[S]`, add the code-level,
+   FSI exercise, …). For tasks tagged `[US*]`, the verification MUST
+   include a user-reachable exercise — see the Vertical-slice rule
+   above. A green unit test on the domain layer is not enough.
+5. Update the status in `tasks.md`. Before writing `[X]` on a `[US*]`
+   task, confirm the vertical-slice rule is satisfied; if not, the
+   honest status is `[ ]` or `[S]`. If `[S]`, add the code-level,
    test-level, and inventory disclosures before moving on.
 6. **Re-run `speckit.graph.compute`** after every status change. This
    refreshes `readiness/task-graph.json` and recomputes `[S*]`
