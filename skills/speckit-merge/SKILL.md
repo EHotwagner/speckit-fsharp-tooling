@@ -1,15 +1,18 @@
 ---
 name: speckit-merge
-description: Squash-merge all feature branches into the default branch (main or master), delete them, and push. Use when the user says "land this", "ship the feature", "merge the feature branches", "squash-merge and push", or anything that means consolidating feature work onto the trunk. For F# libraries with packable projects, optionally bump patch version and pack NuGet artifacts.
+description: Squash-merge all feature branches into the default branch (main or master), delete them, and push. Use when the user says "land this", "ship the feature", "merge the feature branches", "squash-merge and push", or anything that means consolidating feature work onto the trunk. After a successful merge, every packable project MUST be packed with a bumped version number.
 metadata:
-  short-description: Squash-merge feature branches and push
+  short-description: Squash-merge feature branches, bump+pack, and push
 ---
 
 # speckit-merge
 
 Consolidate feature branches onto the trunk (`main` or `master`) via
-squash-merge, push to origin, and for F# library repos optionally bump the
-patch version and produce a local NuGet package.
+squash-merge, push to origin, and — after a successful merge — bump the
+patch version of every packable project and produce a local NuGet
+package. The bump-and-pack step is **mandatory** whenever any packable
+project is present; it is only skipped when the repo contains no
+packable projects at all.
 
 ## When to use
 
@@ -80,23 +83,32 @@ conflicted, and ask them to resolve manually. Never take sides.
 git push origin "$TRUNK"
 ```
 
-### 6. NuGet pack (F# library repos only)
+### 6. NuGet pack — MANDATORY after a successful merge
 
-Guard this step on the presence of a packable `.fsproj`:
+After step 5 succeeds, this step is **required**, not optional. Skip it
+only when the repo contains zero packable projects. Detect them with:
 
 ```bash
 PACKABLE=$(grep -lE '<IsPackable>\s*true|<PackageId>' $(find . -name '*.fsproj'))
 ```
 
-If empty, skip. Otherwise, for each packable project:
+If `PACKABLE` is empty, skip. Otherwise, for **every** packable project,
+you MUST:
 
 1. Read the current `<Version>` from the `.fsproj`. If absent, insert
    `<Version>0.1.0</Version>` into the first `<PropertyGroup>`.
-2. Increment the **patch** segment by 1.
+2. Increment the **patch** segment by 1 (always — never reuse or
+   decrement). The version number must strictly increase on every
+   merge so downstream FSI consumers see a fresh package.
 3. Update the `<Version>` element in place.
-4. Run `dotnet pack -c Release -o ~/.local/share/nuget-local`.
+4. Run `dotnet pack -c Release -o ~/.local/share/nuget-local`. If
+   `dotnet pack` fails, stop and surface the error — do not push a
+   half-bumped repo.
 5. Commit the version bump: `Bump <PackageId> to <new version>`.
 6. Push the bump commit.
+
+Do not consider the merge "done" until every packable project has been
+bumped, packed, committed, and pushed.
 
 ### 7. Clear NuGet caches (F# libraries only)
 

@@ -1,12 +1,14 @@
 ---
-description: Squash-merge feature branches into trunk, push, and (for F# libs) bump+pack.
+description: Squash-merge feature branches into trunk, push, then mandatorily bump+pack every packable project.
 ---
 
 # /speckit-merge
 
 Consolidate feature branches onto the trunk (`main` or `master`) via
-squash-merge, push to origin, and for F# library repos optionally bump
-the patch version and produce a local NuGet package.
+squash-merge and push to origin. After a successful merge, the patch
+version of every packable project **must** be bumped and a local NuGet
+package produced — this step is mandatory, not optional, and is only
+skipped when no packable project exists in the repo.
 
 ## Preconditions — check before doing anything destructive
 
@@ -71,23 +73,32 @@ sides.
 git push origin "$TRUNK"
 ```
 
-### 6. NuGet pack (F# library repos only)
+### 6. NuGet pack — MANDATORY after a successful merge
 
-Guard this step on the presence of a packable `.fsproj`:
+After step 5 succeeds, this step is **required**. Skip it only when the
+repo contains zero packable projects. Detect them with:
 
 ```bash
 PACKABLE=$(grep -lE '<IsPackable>\s*true|<PackageId>' $(find . -name '*.fsproj'))
 ```
 
-If empty, skip. Otherwise, for each packable project:
+If `PACKABLE` is empty, skip. Otherwise, for **every** packable project,
+you MUST:
 
 1. Read the current `<Version>` from the `.fsproj`. If absent, insert
    `<Version>0.1.0</Version>` into the first `<PropertyGroup>`.
-2. Increment the **patch** segment by 1.
+2. Increment the **patch** segment by 1 (always — never reuse or
+   decrement). The version number must strictly increase on every
+   merge so downstream FSI consumers see a fresh package.
 3. Update the `<Version>` element in place.
-4. Run `dotnet pack -c Release -o ~/.local/share/nuget-local`.
+4. Run `dotnet pack -c Release -o ~/.local/share/nuget-local`. If
+   `dotnet pack` fails, stop and surface the error — do not push a
+   half-bumped repo.
 5. Commit the version bump: `Bump <PackageId> to <new version>`.
 6. Push the bump commit.
+
+The merge is not "done" until every packable project has been bumped,
+packed, committed, and pushed.
 
 ### 7. Clear NuGet caches (F# libraries only)
 
