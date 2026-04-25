@@ -8,6 +8,7 @@ holds four artifacts:
 | Preset | `presets/fsharp-opinionated/` | `specify preset add <path>` |
 | Evidence extension | `extensions/evidence/` | `specify extension add <path>` |
 | Codex skills | `~/.codex/skills/speckit-merge/`, `~/.codex/skills/speckit-debug-loop/` | copy or symlink |
+| Claude Code slash commands | `~/.claude/commands/speckit-merge.md`, `~/.claude/commands/speckit-debug-loop.md` | copy or symlink |
 | `dotnet new` template | `templates/speckit-fsharp-lib/` | `dotnet new install <path>` |
 
 ## What each piece does
@@ -63,6 +64,20 @@ Global skills, installed to `~/.codex/skills/`:
   never `[<Skip>]` a failing test, never `--no-verify`, never delete a
   test. Writes `readiness/debug-loop.log.md`.
 
+### Claude Code slash commands
+
+Global slash commands, installed to `~/.claude/commands/`. Same
+procedural content as the Codex skills, repackaged for Claude Code's
+explicit-invocation model:
+
+- `/speckit-merge` — same workflow as the Codex skill above.
+- `/speckit-debug-loop` — same workflow as the Codex skill above.
+  Accepts optional positional args: `[max-iterations] [verify-command]`.
+
+Source of truth lives in `.claude/commands/` so a Claude Code session
+opened inside this tooling repo can use the commands directly while you
+edit them.
+
 ### `dotnet new` template — `speckit-fsharp-lib`
 
 Minimal F# library scaffold aligned with the preset's principles:
@@ -89,6 +104,11 @@ mkdir -p ~/.codex/skills
 cp -r ./skills/speckit-merge ~/.codex/skills/
 cp -r ./skills/speckit-debug-loop ~/.codex/skills/
 
+# 3b. Install the Claude Code slash commands globally.
+mkdir -p ~/.claude/commands
+cp ./.claude/commands/speckit-merge.md ~/.claude/commands/
+cp ./.claude/commands/speckit-debug-loop.md ~/.claude/commands/
+
 # 4. Source the shell wrapper so `new-speckit-fsharp` becomes available.
 # ─ bash / zsh ─ add to ~/.bashrc or ~/.zshrc:
 source ~/projects/speckit-fsharp-tooling/scripts/new-speckit-fsharp.sh
@@ -104,18 +124,20 @@ your shell:
 - `scripts/new-speckit-fsharp.sh` — bash / zsh
 - `scripts/new-speckit-fsharp.nu` — nushell (0.104+)
 
-Source (don't execute) so the function defined inside joins your current
-shell. Under the hood both run the same five steps:
+Source (don't execute) so the function(s) defined inside join your
+current shell. Under the hood every flavor runs the same five steps —
+only the harness flag differs:
 
 ```text
 dotnet new speckit-fsharp-lib -n <name> -o <name> [--Framework …]
-specify init . --integration codex --force
+specify init . --integration <codex|claude> --force
 specify preset add --dev <tooling>/presets/fsharp-opinionated
 specify extension add --dev <tooling>/extensions/evidence
 git init + initial commit
 ```
 
-**bash/zsh form:**
+**bash/zsh form** (single function, currently hard-coded to Codex —
+edit line 80 of `new-speckit-fsharp.sh` if you want Claude Code):
 
 ```bash
 new-speckit-fsharp MyLibrary
@@ -126,16 +148,23 @@ new-speckit-fsharp MyLibrary --SkipSolution
 Extra arguments after `<name>` pass through to `dotnet new`. `--help`
 prints usage.
 
-**nushell form** (uses `def --env` so `cd` propagates to the caller):
+**nushell form** (uses `def --env` so `cd` propagates to the caller).
+Two functions, one per harness:
 
 ```nushell
-new-speckit-fsharp MyLibrary
-new-speckit-fsharp MyLibrary --framework net10.0
-new-speckit-fsharp MyLibrary --skip-solution
+new-speckit-fsharp-codex MyLibrary
+new-speckit-fsharp-codex MyLibrary --framework net10.0
+new-speckit-fsharp-codex MyLibrary --skip-solution
+
+new-speckit-fsharp-claude MyLibrary
+new-speckit-fsharp-claude MyLibrary --framework net10.0
+new-speckit-fsharp-claude MyLibrary --skip-solution
 ```
 
 Nu flags are kebab-case and the `--framework` value is constrained to
 the choices your `template.json` offers (net8.0 | net9.0 | net10.0).
+Both functions share a private `_new-speckit-fsharp-impl` helper so
+the procedure stays DRY.
 
 Both wrappers auto-resolve the monorepo root from their own file location,
 so you can keep the tooling anywhere. Error handling halts on any failed
@@ -144,9 +173,18 @@ step with a named diagnostic (bash) or a structured `error make` (nu).
 Usage:
 
 ```bash
+# bash / zsh — Codex only for now:
 new-speckit-fsharp MyLibrary
 cd MyLibrary
 # Now run /speckit.constitution to fill placeholders, then /speckit.specify…
+```
+
+```nushell
+# nushell — pick your harness:
+new-speckit-fsharp-codex  MyLibrary    # Codex CLI
+new-speckit-fsharp-claude MyLibrary    # Claude Code
+# In both cases `cd` is already inside the new project when the function
+# returns. Run /speckit.constitution next.
 ```
 
 ## Per-project workflow
@@ -213,6 +251,9 @@ speckit-fsharp-tooling/
 ├── skills/                                    ← Codex skills (source of truth)
 │   ├── speckit-merge/SKILL.md
 │   └── speckit-debug-loop/SKILL.md
+├── .claude/commands/                          ← Claude Code slash commands (source of truth)
+│   ├── speckit-merge.md
+│   └── speckit-debug-loop.md
 ├── scripts/
 │   └── new-speckit-fsharp.sh                  ← shell wrapper (source, don't exec)
 └── templates/
@@ -227,13 +268,17 @@ speckit-fsharp-tooling/
 
 The `skills/` directory is the source of truth for the two Codex skills.
 The one-time install step (step 3 above) copies them into
-`~/.codex/skills/`, where Codex discovers them globally.
+`~/.codex/skills/`, where Codex discovers them globally. Likewise,
+`.claude/commands/` is the source of truth for the Claude Code slash
+commands, copied into `~/.claude/commands/` by step 3b.
 
 ## Status
 
 - [x] preset (constitution, tasks, implement, constitution prompt)
 - [x] evidence extension (graph compute, audit, patterns)
 - [x] Codex skills (speckit-merge, speckit-debug-loop)
+- [ ] Claude Code slash commands (speckit-merge, speckit-debug-loop) — files
+      authored, end-to-end smoke test pending
 - [x] dotnet new template (speckit-fsharp-lib)
 - [x] end-to-end smoke test in a fresh project — confirmed `specify preset
       add --dev` + `specify extension add --dev` install cleanly, templates
