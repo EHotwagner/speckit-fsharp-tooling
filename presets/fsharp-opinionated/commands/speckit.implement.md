@@ -1,5 +1,5 @@
 ---
-description: "Implement tasks with synthetic-evidence marking discipline (Principle IV)."
+description: "Implement tasks with Elmish/MVU boundaries and synthetic-evidence marking discipline."
 ---
 
 # /speckit.implement
@@ -33,7 +33,7 @@ Use the status legend from the template exactly:
 **Never mark a task `[X]` if any of the `[S]` conditions apply.** The
 evidence audit will catch many such cases via diff-scan, but the agent is
 expected to be honest about direct declarations. Dishonesty undermines the
-whole synthetic-evidence regime (Principle IV).
+whole synthetic-evidence regime (Principle V).
 
 ## Vertical-slice rule (US phases)
 
@@ -60,7 +60,37 @@ This rule is in addition to the synthetic-evidence checks above. A task
 can fail the vertical-slice rule without involving any mocks at all —
 domain code that nothing calls is its own failure mode.
 
-## Synthetic-evidence disclosures (Principle IV)
+## Elmish/MVU discipline (Principle IV)
+
+For any task whose spec, plan, or task line identifies stateful workflow or
+I/O, implement through the Elmish/MVU boundary:
+
+- `Model` captures owned workflow state.
+- `Msg` captures user actions, external responses, and internal transitions.
+- `Effect` or `Cmd<Msg>` captures requested I/O.
+- `init` returns initial state plus startup effects.
+- `update` is pure: it may inspect `Msg` and `Model`, but it MUST NOT touch
+  filesystem, network, database, process state, wall clock, random source, or
+  mutable global state.
+- An interpreter at the edge executes effects and maps results back to `Msg`.
+
+Before marking an MVU-bearing `[US*]` task `[X]`, verify all of the following:
+
+- FSI or packed-library tests exercise public `init` / `update` paths.
+- Tests assert both next `Model` and emitted effects for representative
+  messages.
+- The interpreter path has real evidence where safe (real filesystem,
+  process, network, database, or host entry point). If it uses a fake,
+  in-memory substitute, canned response, or unconnected interpreter, mark
+  the task `[S]` and disclose it.
+- The user-facing entry point is wired through the interpreter boundary, not
+  around it.
+
+Simple pure functions do not need an MVU shell. If a task does not involve
+stateful workflow or I/O, note that Principle IV is not applicable and use
+the ordinary spec → FSI → semantic tests → implementation path.
+
+## Synthetic-evidence disclosures (Principle V)
 
 When you emit an `[S]` task, you MUST also:
 
@@ -96,12 +126,13 @@ When you emit an `[S]` task, you MUST also:
 4. Run the verification appropriate for the phase (tests, baseline check,
    FSI exercise, …). For tasks tagged `[US*]`, the verification MUST
    include a user-reachable exercise — see the Vertical-slice rule
-   above. A green unit test on the domain layer is not enough.
+   above. For MVU-bearing tasks, include transition/effect assertions and
+   interpreter evidence. A green unit test on the domain layer is not enough.
 5. Update the status in `tasks.md`. Before writing `[X]` on a `[US*]`
    task, confirm the vertical-slice rule is satisfied; if not, the
    honest status is `[ ]` or `[S]`. If `[S]`, add the code-level,
    test-level, and inventory disclosures before moving on.
-6. **Re-run `speckit.graph.compute`** after every status change. This
+6. **Re-run `speckit.evidence.graph`** after every status change. This
    refreshes `readiness/task-graph.json` and recomputes `[S*]`
    propagation. It's cheap (milliseconds).
 7. Move to the next task.

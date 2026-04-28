@@ -12,7 +12,7 @@ marked by HTML comments:
 - `<!-- TAILORABLE -->` — tune per project. Ask the user what's appropriate
   for this project's domain and stack. You MAY add or reword bullets within
   these sections.
-- `<!-- LOCKED -->` — do NOT modify these sections. The six Core Principles,
+- `<!-- LOCKED -->` — do NOT modify these sections. The seven Core Principles,
   Change Classification, Workflow & Quality Gates, and Governance sections
   are shared doctrine across every project using this preset. If the user
   explicitly asks to modify a locked section, pause and confirm: *"This

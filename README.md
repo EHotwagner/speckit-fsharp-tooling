@@ -15,20 +15,22 @@ holds four artifacts:
 
 ### Preset — `fsharp-opinionated`
 
-Ships the shared F# constitution (six LOCKED principles) and overrides
+Ships the shared F# constitution (seven LOCKED principles) and overrides
 three core Speckit commands:
 
 - `/speckit.constitution` — fills placeholders, respects LOCKED markers.
 - `/speckit.tasks` — emits `tasks.md` + `tasks.deps.yml` in lockstep.
-- `/speckit.implement` — teaches the agent the `[S]` synthetic-marking
-  discipline from constitutional Principle IV.
+- `/speckit.implement` — teaches the agent the Elmish/MVU boundary
+  discipline from Principle IV and `[S]` synthetic-marking discipline from
+  Principle V.
 
 Templates:
 
-- `constitution-template.md` — six principles, LOCKED/TAILORABLE/REQUIRED
+- `constitution-template.md` — seven principles, LOCKED/TAILORABLE/REQUIRED
   markers so per-project amendments don't silently dilute shared doctrine.
 - `tasks-template.md` — five-state legend (`[ ] [X] [S] [F] [-]`);
-  `[S*]` is computed, never written.
+  `[S*]` is computed, never written; stateful or I/O-bearing stories must
+  include Elmish/MVU transition, effect, and interpreter evidence.
 - `tasks.deps-template.yml` — sibling dependency topology, seeds with the
   skeleton edges.
 
@@ -36,7 +38,7 @@ Templates:
 
 Adds two new Speckit commands and auto-registers two hooks:
 
-- `speckit.graph.compute` — validates the DAG (acyclic, no dangling
+- `speckit.evidence.graph` — validates the DAG (acyclic, no dangling
   refs), auto-injects phase-checkpoint edges, computes synthetic
   propagation (`[S]` → `[S*]`), writes `readiness/task-graph.{json,md}`.
   Registered as `before_implement` — refuses to start implement on a
@@ -256,6 +258,8 @@ speckit-fsharp-tooling/
 │   └── speckit-debug-loop.md
 ├── scripts/
 │   └── new-speckit-fsharp.sh                  ← shell wrapper (source, don't exec)
+├── tests/
+│   └── evidence-audit-smoke.sh                ← audit + graph smoke test
 └── templates/
     └── speckit-fsharp-lib/                    ← dotnet new template
         ├── .template.config/template.json
@@ -276,6 +280,8 @@ commands, copied into `~/.claude/commands/` by step 3b.
 
 - [x] preset (constitution, tasks, implement, constitution prompt)
 - [x] evidence extension (graph compute, audit, patterns)
+- [x] evidence audit smoke test — verifies `[S]` → `[S*]`, diff-scan
+      blocking/advisory hits, whitelists, and severity overrides.
 - [x] Codex skills (speckit-merge, speckit-debug-loop)
 - [ ] Claude Code slash commands (speckit-merge, speckit-debug-loop) — files
       authored, end-to-end smoke test pending

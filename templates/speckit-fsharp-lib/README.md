@@ -41,6 +41,8 @@ dotnet new speckit-fsharp-lib -n MyLibrary -o MyLibrary
    library available to `scripts/prelude.fsx`.
 3. `dotnet fsi` then `#load "scripts/prelude.fsx"` — first interactive
    session against the API.
-4. `specify init . --ai codex --ai-skills --preset ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated` — layer the
+4. `specify init . --integration codex --force` — initialize Speckit's
+   Codex integration.
+5. `specify preset add --dev ~/projects/speckit-fsharp-tooling/presets/fsharp-opinionated` — layer the
    preset on top.
-5. `specify extension add ~/projects/speckit-fsharp-tooling/extensions/evidence` — enable the DAG + audit.
+6. `specify extension add --dev ~/projects/speckit-fsharp-tooling/extensions/evidence` — enable the DAG + audit.

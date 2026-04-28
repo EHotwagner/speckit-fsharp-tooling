@@ -40,7 +40,7 @@ patterns:
     severity: block
     reason: "Commented-out assertion"
 
-  # Synthetic banner from Principle IV — informational, not blocking.
+  # Synthetic banner from Principle V — informational, not blocking.
   # These are HOW the preset enforces disclosure. Seeing them is GOOD; they
   # surface because the code is honestly labeled. The audit logs them as
   # advisory so reviewers can confirm the synthetic-evidence inventory is
@@ -48,7 +48,7 @@ patterns:
   - id: synthetic-banner
     regex: 'SYNTHETIC(\s|:|_|!|\*|$)|Synthetic(\s|$)'
     severity: advisory
-    reason: "Synthetic-evidence disclosure (Principle IV)"
+    reason: "Synthetic-evidence disclosure (Principle V)"
 
 # Whitelist: suppress a pattern's hits when the condition matches.
 # file_glob matches the file path of the hit; line_regex matches the matched

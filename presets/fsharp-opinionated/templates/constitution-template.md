@@ -2,7 +2,7 @@
 # [PROJECT_NAME] Constitution
 
 <!-- LOCKED: do not modify during /speckit.constitution without user override.
-     These six principles are the shared doctrine of the fsharp-opinionated
+     These seven principles are the shared doctrine of the fsharp-opinionated
      preset. Per-project amendment requires explicit user direction and SHOULD
      be followed by a PR to the preset itself so the change propagates. -->
 
@@ -90,7 +90,50 @@ gymnastics in place of an obvious loop, or a fold-with-state where a
 `mutable` would read straight through — is itself a form of cleverness
 this principle exists to discourage.
 
-### IV. Synthetic Evidence Requires Loud, Repeated Disclosure
+### IV. Elmish/MVU Is the Boundary for Stateful or I/O Workflows
+
+Any feature with multi-step state, external I/O, retries, user interaction,
+background work, or operational recovery MUST model its behavior through an
+Elmish-style Model-View-Update boundary before implementation. Simple pure
+functions do not need Elmish ceremony, but once behavior includes stateful
+workflow or I/O, the public `.fsi` surface MUST expose or clearly wrap:
+
+- `Model` — the durable state the workflow owns
+- `Msg` — the events, user actions, external responses, and internal
+  transitions the workflow accepts
+- `Effect` or `Cmd<Msg>` — the I/O the workflow requests but does not
+  execute inside `update`
+- `init` — initial state plus requested startup effects
+- `update` — a pure transition from `Msg` and `Model` to next `Model` plus
+  effects
+- an interpreter at the edge that executes effects and turns results back
+  into `Msg`
+
+The Elmish package is the preferred runtime when the host benefits from its
+`Program`, `Cmd`, subscription, or renderer integration. For libraries,
+CLIs, services, and small hosts, a local MVU/effect algebra is acceptable
+when it preserves the same separation: `update` is pure, I/O is represented
+as data or `Cmd<Msg>`, and interpretation happens only at the edge.
+
+Semantic tests MUST cover both sides of the boundary:
+
+- pure transition tests: given `Model` + `Msg`, assert the next `Model` and
+  emitted effects
+- interpreter tests: execute effects against real filesystem, process,
+  network, database, or other real dependencies where safe
+- FSI transcripts: exercise `init` and representative `update` paths through
+  the packed library or prelude, not private helpers
+
+A task may not be marked `[X]` for a stateful or I/O-bearing user story
+based only on domain-unit tests. If the interpreter is fake, in-memory, or
+not wired to the user-facing entry point, Principle V synthetic disclosure
+applies.
+
+Rationale: Elmish makes the hard part observable. State transitions become
+plain values that can be tested exhaustively, and I/O becomes an explicit
+contract that can be audited, interpreted, and exercised with real evidence.
+
+### V. Synthetic Evidence Requires Loud, Repeated Disclosure
 
 Synthetic evidence — mocks, stubs, fakes, hardcoded fixtures, in-memory
 substitutes, `NotImplementedException` placeholders, `failwith "TODO"`,
@@ -134,19 +177,19 @@ Rationale: Synthetic evidence is the quiet failure mode of "passing" tests.
 Loud, redundant disclosure is the only practice that scales past the
 attention of the author.
 
-### V. Test Evidence Is Mandatory
+### VI. Test Evidence Is Mandatory
 
 Behavior-changing code MUST include automated tests that fail before the
 change and pass after. Prefer tests that run against real dependencies (real
 DB, real filesystem, real network where safe); fall back to synthetic only
-under Principle IV's disclosure regime.
+under Principle V's disclosure regime.
 
 Tests blocked by out-of-scope issues MUST be marked skipped (task `[-]`,
 `[<Skip>]` attribute, or the test framework's skip mechanism) with written
 rationale. Never mark a failing test as passed. Never weaken an assertion to
 green a build — weaken the scope instead, and document it.
 
-### VI. Observability and Safe Failure
+### VII. Observability and Safe Failure
 
 Operationally significant events (startup, subsystem initialization,
 asset/IO failure, recovery paths) MUST emit structured diagnostics with
@@ -179,6 +222,8 @@ regardless of whether tests pass.
 - F# on .NET is the exclusive stack. Cross-language integration uses gRPC or
   OpenAPI over separate projects.
 - Every public `.fs` module requires a curated `.fsi`.
+- Stateful or I/O-bearing features use an Elmish/MVU boundary (`Model`,
+  `Msg`, `Effect` or `Cmd<Msg>`, pure `update`, edge interpreter).
 - Surface-area baseline files are required for each public module.
 - Public API changes document compatibility impact and migration guidance.
 - Dependencies are minimized; each new dependency states need, version
@@ -195,11 +240,14 @@ Work MUST pass these gates in order:
 1. **Specification gate** — spec is complete and bounded, names its Tier,
    public-API impact, and verification approach.
 2. **Planning gate** — plan translates the constitution into concrete
-   design; Tier 1 plans include `.fsi` contract updates.
+   design; Tier 1 plans include `.fsi` contract updates, and stateful or
+   I/O-bearing plans identify their Elmish/MVU model, messages, effects,
+   and interpreter boundary.
 3. **Task gate** — tasks are story-grouped; `tasks.deps.yml` is emitted
    alongside `tasks.md`; task graph is acyclic with no dangling refs.
-4. **Implementation gate** — declared task statuses follow the legend; `[S]`
-   is used whenever Principle IV applies.
+4. **Implementation gate** — declared task statuses follow the legend;
+   stateful or I/O-bearing changes keep `update` pure and I/O at the
+   interpreter edge; `[S]` is used whenever Principle V applies.
 5. **Evidence gate** — the `after_implement` audit produces verdict PASS
    with no remaining `[S]` / `[S*]` and no unresolved diff-scan hits, or
    every exception is covered by a logged `--accept-synthetic` override

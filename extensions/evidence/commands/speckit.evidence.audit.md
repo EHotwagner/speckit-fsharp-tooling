@@ -7,7 +7,7 @@ description: "Merge-gate audit: synthetic propagation + diff-scan. Hard-blocks o
 Produce a merge-readiness verdict for the current feature. Combines two
 signals:
 
-1. **Task graph** (via `speckit.graph.compute`). Any `[S]` or `[S*]` task
+1. **Task graph** (via `speckit.evidence.graph`). Any `[S]` or `[S*]` task
    counts against merge-readiness.
 2. **Diff scan** — greps `git diff <base>...HEAD` against the default
    pattern library in `audit-patterns.yml`. Block-severity hits count
@@ -50,7 +50,7 @@ AND any block-severity diff-scan hit are hard gates. The
 `--accept-synthetic` flag is the only way past; it requires written
 justification and is logged. Advisory-severity diff-scan hits are
 informational only (the synthetic-banner pattern is intentionally
-advisory — seeing `SYNTHETIC:` comments is proof that Principle IV
+advisory — seeing `SYNTHETIC:` comments is proof that Principle V
 disclosure is happening).
 
 ## When you see NEEDS-EVIDENCE

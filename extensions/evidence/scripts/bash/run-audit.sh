@@ -138,14 +138,20 @@ if [[ -n "$REPO_ROOT" ]]; then
   trap 'rm -f "$DIFF_FILE"' EXIT
   git -C "$REPO_ROOT" diff "$BASE_REF"...HEAD --unified=0 >"$DIFF_FILE" || true
 
+  OVERRIDES_FILE=""
+  if [[ -f "$REPO_ROOT/.specify/audit-patterns.overrides.yml" ]]; then
+    OVERRIDES_FILE="$REPO_ROOT/.specify/audit-patterns.overrides.yml"
+  fi
+
   set +e
-  python3 - "$PATTERNS_FILE" "$DIFF_FILE" "$DIFF_HITS_JSON" <<'PYEOF'
+  python3 - "$PATTERNS_FILE" "$DIFF_FILE" "$DIFF_HITS_JSON" "$OVERRIDES_FILE" <<'PYEOF'
 import json, re, sys
 from pathlib import Path
 
 patterns_path = Path(sys.argv[1])
 diff_path = Path(sys.argv[2])
 out_path = Path(sys.argv[3])
+overrides_path = Path(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
 
 # Minimal YAML parsing — we only need the patterns + whitelist blocks.
 # This is NOT a general YAML parser; it's tuned to the audit-patterns.yml
@@ -157,19 +163,33 @@ def parse(text):
     severity_overrides = {}
     state = None
     cur = None
+
+    def flush():
+        nonlocal cur, state
+        if not cur:
+            return
+        if state == "patterns":
+            patterns.append(cur)
+        elif state == "whitelist" and "pattern_id" in cur:
+            whitelist.append(cur)
+        cur = None
+
     for raw in text.splitlines():
         line = raw.rstrip()
         if not line or line.lstrip().startswith("#"):
             continue
         if line.startswith("patterns:"):
+            flush()
             state = "patterns"; continue
         if line.startswith("whitelist:"):
+            flush()
             state = "whitelist"; continue
         if line.startswith("severity_overrides:"):
+            flush()
             state = "severity_overrides"; continue
         if state == "patterns":
             if line.startswith("  - "):
-                if cur: patterns.append(cur)
+                flush()
                 cur = {}
                 # first field is on the same line
                 field = line[4:]
@@ -181,7 +201,7 @@ def parse(text):
                 cur[k.strip()] = v.strip().strip("'\"")
         elif state == "whitelist":
             if line.startswith("  - "):
-                if cur and "pattern_id" in cur: whitelist.append(cur)
+                flush()
                 cur = {}
                 field = line[4:]
                 if ":" in field:
@@ -190,13 +210,17 @@ def parse(text):
             elif line.startswith("    ") and cur is not None and ":" in line:
                 k, v = line.strip().split(":", 1)
                 cur[k.strip()] = v.strip().strip("'\"")
-    if state == "patterns" and cur:
-        patterns.append(cur)
-    if state == "whitelist" and cur and "pattern_id" in cur:
-        whitelist.append(cur)
+        elif state == "severity_overrides":
+            m = re.match(r"^\s{2,}([A-Za-z0-9_-]+)\s*:\s*(block|advisory)\s*$", line)
+            if m:
+                severity_overrides[m.group(1)] = m.group(2)
+    flush()
     return patterns, whitelist, severity_overrides
 
 patterns, whitelist, overrides = parse(patterns_path.read_text())
+if overrides_path and overrides_path.exists():
+    _, _, per_project_overrides = parse(overrides_path.read_text())
+    overrides.update(per_project_overrides)
 for p in patterns:
     if p["id"] in overrides:
         p["severity"] = overrides[p["id"]]
@@ -276,12 +300,13 @@ PYEOF
   DIFF_EXIT=$?
   set -e
   if [[ $DIFF_EXIT -eq 2 ]]; then
-    BLOCK_HITS=1
+    BLOCK_HITS=$(python3 -c "import json; d=json.load(open('$DIFF_HITS_JSON')); print(len(d['blocking']))")
   elif [[ $DIFF_EXIT -ne 0 ]]; then
     die "diff-scan helper failed (exit $DIFF_EXIT)"
   fi
 
   if [[ -f "$DIFF_HITS_JSON" ]]; then
+    BLOCK_HITS=$(python3 -c "import json; d=json.load(open('$DIFF_HITS_JSON')); print(len(d['blocking']))")
     ADVISORY_HITS=$(python3 -c "import json; d=json.load(open('$DIFF_HITS_JSON')); print(len(d['advisory']))")
   fi
 else

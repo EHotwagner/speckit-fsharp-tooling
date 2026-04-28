@@ -40,6 +40,12 @@ derived from the spec and plan.
   matches.
 - **Parallel-safe marker.** `[P]` means "no deps inside this phase" — the
   script can verify it; you SHOULD emit it as a hint.
+- **Elmish/MVU applicability.** For any stateful or I/O-bearing story, emit
+  explicit tasks for the `.fsi` contract (`Model`, `Msg`, `Effect` or
+  `Cmd<Msg>`, `init`, `update`, interpreter boundary), pure transition tests,
+  emitted-effect assertions, and real interpreter evidence where safe. For a
+  simple pure feature, state that Principle IV is not applicable in the
+  evidence-obligations task.
 - **Synthetic-evidence inventory.** Include the empty Synthetic-Evidence
   Inventory table from the template. It will grow as `/speckit.implement`
   adds `[S]` tasks.
@@ -49,10 +55,10 @@ derived from the spec and plan.
 Immediately after writing both files, run:
 
 ```bash
-.specify/extensions/evidence/scripts/bash/run-audit.sh --graph-only
+.specify/extensions/evidence/scripts/bash/run-audit.sh specs/<FEATURE_ID> --graph-only
 ```
 
-(or invoke `/speckit.graph.compute` if the extension is installed).
+(or invoke `/speckit.evidence.graph` if the extension is installed).
 
 This validates:
 - Every Tnnn in `tasks.md` has a matching key in `tasks.deps.yml`.
@@ -67,4 +73,4 @@ phase complete until the DAG is clean.
 Fall back to emitting both files without running the validator. Warn the
 user: *"The evidence extension is not installed, so the DAG cannot be
 validated. Run `specify extension add evidence` to enable
-`speckit.graph.compute` and `speckit.evidence.audit`."*
+`speckit.evidence.graph` and `speckit.evidence.audit`."*

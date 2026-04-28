@@ -2,7 +2,7 @@
 description: "Validate and render the task DAG; compute synthetic propagation."
 ---
 
-# /speckit.graph.compute
+# /speckit.evidence.graph
 
 Parse `specs/<feature>/tasks.md` and `specs/<feature>/tasks.deps.yml`,
 validate the graph (acyclic, no dangling refs, every id present in both
