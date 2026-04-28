@@ -82,7 +82,7 @@ def --env _new-speckit-fsharp-impl [
 
 def --env "new-speckit-fsharp-codex" [
     name: string                     # Project directory name
-    --framework: string = "net9.0"   # Target framework (net8.0|net9.0|net10.0)
+    --framework: string = "net10.0"  # Target framework (net8.0|net9.0|net10.0)
     --skip-solution                  # Omit the .sln file (useful inside a monorepo)
 ] {
     _new-speckit-fsharp-impl $name "codex" $framework $skip_solution
@@ -90,7 +90,7 @@ def --env "new-speckit-fsharp-codex" [
 
 def --env "new-speckit-fsharp-claude" [
     name: string                     # Project directory name
-    --framework: string = "net9.0"   # Target framework (net8.0|net9.0|net10.0)
+    --framework: string = "net10.0"  # Target framework (net8.0|net9.0|net10.0)
     --skip-solution                  # Omit the .sln file (useful inside a monorepo)
 ] {
     _new-speckit-fsharp-impl $name "claude" $framework $skip_solution

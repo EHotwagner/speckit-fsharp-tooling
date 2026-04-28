@@ -50,7 +50,7 @@ Steps executed, in order:
 
 Extra args pass through to \`dotnet new\`. Common options:
 
-  --Framework net10.0|net9.0|net8.0   target framework (default: net9.0)
+  --Framework net10.0|net9.0|net8.0   target framework (default: net10.0)
   --SkipSolution                       omit the .sln file
 
 Monorepo root: $__SPECKIT_FSHARP_TOOLING
